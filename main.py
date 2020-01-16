@@ -13,7 +13,7 @@ number_of_pixels = 784
 #base path
 data_path = "data/"
 
-#Load training data, uses this for loop because otherwise it will crash theshell
+#Load training data, uses this for loop because otherwise it will crash the shell
 training_data = np.empty([60000,785])
 row = 0
 for line in open(data_path + "train.csv"):
@@ -59,4 +59,4 @@ print("Time taken:", timetaken)
 
 #Here we will implement the nerual network code and use it to train.
 neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10])
-neuralNetwork.trainNetwork(training_images, training_labels_one_hot)
+neuralNetwork.trainNetwork(training_images, training_labels_one_hot, 10, 0.5)
