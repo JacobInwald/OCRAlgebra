@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import NeuralNetwork as nn
 
+
 start = datetime.now()
 ##This first bit is getting the training data to work with.
 #image sizing
@@ -58,5 +59,7 @@ timetaken = datetime.now() - start
 print("Time taken:", timetaken)
 
 #Here we will implement the nerual network code and use it to train.
-neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10])
-neuralNetwork.trainNetwork(training_images, training_labels_one_hot, 10, 0.5)
+neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10], False, "data/weights.txt")
+neuralNetwork.trainNetwork(training_images, training_labels_one_hot, 10, 1)
+neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10], True, "data/weights.txt")
+neuralNetwork.testNetwork(test_images, test_labels)

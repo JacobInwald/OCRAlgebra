@@ -1,29 +1,26 @@
-#This is a class that acts as a library for nescesary methods
+# This is a class that acts as a library for nescesary methods
 import numpy as np
 from numba import vectorize
 
+
 def sigmoid(x):
-    return 1/(1 + np.exp(-x))
+    if x >= 100000:
+        return 1
+    elif x <= -100000:
+        return 0
+    return 1 / (1 + np.exp(-x))
+
 
 def sigmoidDerivative(x):
-    return (x) * (1 - x)
+    return sigmoid(x) * (1 - sigmoid(x))
+
 
 def costFunctionOutputLayer(answer, trueValue):
     value = []
     for i in range(len(answer)):
-        sign = (trueValue[i] - answer[i])
-        sign = sign/abs(sign)
-        value.append(sign * (trueValue[i] - answer[i])**2
+        y = trueValue[i]
+        a = answer[i]
+        z = sigmoidDerivative(a)
+        newCost = 2 * (y - a) * sigmoidDerivative(z)
+        value.append(newCost)
     return value
-
-def inputSummingFunction(inputNodes):
-    total = 0
-    for i in inputNodes:
-        node = i[0]
-        weight = i[1]
-        total += node.output * weight
-        
-    return total
-        
-        
-        

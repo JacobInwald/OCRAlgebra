@@ -5,7 +5,6 @@
 - mnist data library
 
 ## To do List:
-- Get the neural netwrok to not flat line at cost 1
 - Add the algebra solver
 - recognise characters
 
