@@ -5,61 +5,61 @@ import NeuralNetwork as nn
 
 
 start = datetime.now()
-##This first bit is getting the training data to work with.
-#image sizing
-image_size = 28
-number_of_labels = 10
-number_of_pixels = 784
+# This first bit is getting the training data to work with.
+# image sizing
+imageSize = 28
+numberOfLabels = 10
+numberOfPixels = 784
 
-#base path
-data_path = "data/"
+# base path
+dataPath = "data/"
 
-#Load training data, uses this for loop because otherwise it will crash the shell
-training_data = np.empty([60000,785])
+# Load training data, uses this for loop because otherwise it will crash the shell
+trainingData = np.empty([60000, 785])
 row = 0
-for line in open(data_path + "train.csv"):
-    training_data[row] = np.fromstring(line, sep=",")
+for line in open(dataPath + "train.csv"):
+    trainingData[row] = np.fromstring(line, sep=",")
     row += 1
 
-#Load testing data
-test_data = np.empty([10000, 785])
+# Load testing data
+testData = np.empty([10000, 785])
 row = 0
-for line in open(data_path + "test.csv"):
-    test_data[row] = np.fromstring(line, sep=",")
+for line in open(dataPath + "test.csv"):
+    testData[row] = np.fromstring(line, sep=",")
     row += 1
     
-#This is used to adjust the MNIST dataset and map values into an interval between 0.01 and 1
+# This is used to adjust the MNIST dataset and map values into an interval between 0.01 and 1
 adjust = 0.99 / 255
 
-#Getting all the images in the correct interval
-training_images = np.asfarray(training_data[:, 1:]) * adjust + 0.01
-test_images = np.asfarray(test_data[:, 1:]) * adjust + 0.01
+# Getting all the images in the correct interval
+trainingImages = np.asfarray(trainingData[:, 1:]) * adjust + 0.01
+testImages = np.asfarray(testData[:, 1:]) * adjust + 0.01
 
-#Getting all the labels in the correct order
-training_labels = np.asfarray(training_data[:, :1])
-test_labels = np.asfarray(test_data[:, :1])
+# Getting all the labels in the correct order
+trainingLabels = np.asfarray(trainingData[:, :1])
+testLabels = np.asfarray(testData[:, :1])
 
-#Organising data in a one-hot representation. This will use 0.01s and 0.99 as this is better for calculatiosn
+# Organising data in a one-hot representation. This will use 0.01s and 0.99 as this is better for calculatiosn
 
-lr = np.arange(number_of_labels)
+lr = np.arange(numberOfLabels)
 
-training_labels_one_hot = (lr==training_labels).astype(np.float)
-test_labels_one_hot = (lr==test_labels).astype(np.float)
+trainingLabelsOneHot = (lr == trainingLabels).astype(np.float)
+testLabelsOneHot = (lr == testLabels).astype(np.float)
 
-#making sure 0.01s and 0.99s are used
+# making sure 0.01s and 0.99s are used
 
-training_labels_one_hot[training_labels_one_hot==0] = 0.01
-training_labels_one_hot[training_labels_one_hot==1] = 0.99
+trainingLabelsOneHot[trainingLabelsOneHot == 0] = 0
+trainingLabelsOneHot[trainingLabelsOneHot == 1] = 0.99
 
-test_labels_one_hot[test_labels_one_hot==0] = 0.01
-test_labels_one_hot[test_labels_one_hot==1] = 0.99
+testLabelsOneHot[testLabelsOneHot == 0] = 0
+testLabelsOneHot[testLabelsOneHot == 1] = 0.99
 
-timetaken = datetime.now() - start
+timeTaken = datetime.now() - start
 
-print("Time taken:", timetaken)
+print("Time taken:", timeTaken)
 
-#Here we will implement the nerual network code and use it to train.
-neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10], False, "data/weights.txt")
-neuralNetwork.trainNetwork(training_images, training_labels_one_hot, 10, 1)
-neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10], True, "data/weights.txt")
-neuralNetwork.testNetwork(test_images, test_labels)
+# Here we will implement the neural network code and use it to train.
+neuralNetwork = nn.NeuralNetwork([784, 20, 16, 10], True, "data/weights.txt")
+neuralNetwork.trainNetwork(trainingImages, trainingLabelsOneHot, 20, 0.001)
+neuralNetwork = nn.NeuralNetwork([784, 20, 16, 10], True, "data/weights.txt")
+neuralNetwork.testNetwork(testImages, testLabels)

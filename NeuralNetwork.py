@@ -1,34 +1,34 @@
-'''
-    To Do:
-        Generator Class
-        Neuron Class
-        Weight Class
-        General Calculas class
-'''
-'import numpy as np'
+# To Do:
+#     Generator Class
+#     Neuron Class
+#     Weight Class
+#     General Calculus class
+
 import matplotlib.pyplot as plt
 import utilities as util
 import random
 
 
-class node:
+class Node:
 
     def __init__(self, inputNodes, outputNodes, output, bias, number):
-        # This will be a list of tuples, the first being the node the second being the weight
+        # These will be a lists of tuples, the first item being the node the second being the weight
         self.inputNodes = inputNodes
         self.outputNodes = outputNodes
+        # These are the variables used in propagation. I am using the sigmoid function as an activation function.
         self.bias = bias
-        self.number = number
-        # Sets activation function to sigmoid
         self.activationFunction = util.sigmoid
         self.output = output
         self.error = 0
+        # This is an id that stores position in the nodes array
+        self.number = number
 
     def feedForward(self):
         # This just sums the input nodes outputs and then passes that values through an activation function
         self.output = self.activationFunction(self.sumInputs() + self.bias)
 
     def sumInputs(self):
+        # Loops through all the inputs and sums the weights and activation
         total = 0
         for i in self.inputNodes:
             total += i[1] * i[0].output
@@ -38,37 +38,39 @@ class node:
 class NeuralNetwork:
 
     def __init__(self, nodeNumbers, loadFromFile, filePath):
-        # initialise variables
+        # This uses the node numbers as an input to generate a network with randomised weights and biases
         self.nodes = [[] for _ in nodeNumbers]
         self.layers = len(nodeNumbers)
         self.generateNetwork(nodeNumbers)
+        # This uses the next two parameters to check whether the network is being loaded from a file and if
+        # not overwrites to the file specified
         self.path = filePath
         if not loadFromFile:
             self.saveToFile(self.path)
         else:
             self.loadFromFile(self.path)
+        # This initialises an empty array that can be used to plot data with matplot
         self.costArray = []
 
-    # generates a connected network based on an array of numbers e.g. [784, 16, 16, self.layers]
+    # generates a connected network based on an array of numbers e.g. [784, 16, 16, 10]
     def generateNetwork(self, nodeNumbers):
-        # generates a void network with no connections but has the correct size
-
+        # generates an array of nodes that is of the same size specified
         index = -1
         for i in nodeNumbers:
             index += 1
             for x in range(i):
-                # initialise nodes with biases and outputs
-                self.nodes[index].append(node([None], [None], random.uniform(0, 1), random.uniform(-10, 10), x))
+                # initialise nodes with None type inputs and outputs as well as biases and outputs
+                self.nodes[index].append(Node([None], [None], random.uniform(0, 1), random.uniform(-10, 10), x))
 
-                # This loops through the generated list and sets the input nodes
+        # This loops through the generated array and sets the input nodes
         for i in range(self.layers):
             layer = self.nodes[i]
-            # To skip the first layer which is just inputs and are not actually nodes, so don't have input nodes.
-            if (i == 0):
+            # To skip the first layer which are the inputs and so don't have input nodes
+            if i == 0:
                 continue
             # sets inputNodes
             for tgtNode in layer:
-                # initialise inputNode as a None array with length of previous layer
+                # initialise inputNodes as a None array with length of previous layer
                 tgtNode.inputNodes = [None] * len(self.nodes[i - 1])
                 # loops through previous layer and sets weight and nodes
                 for x in range(len(self.nodes[i - 1])):
@@ -77,54 +79,75 @@ class NeuralNetwork:
         # This loops through the generated list and sets the output nodes
         for i in range(self.layers):
             layer = self.nodes[i]
-            prevLayerIndex = i + 1
             # To skip the last layer which are the output nodes
-            if (i == self.layers - 1):
+            if i == self.layers - 1:
                 break
-
             # set outputNodes
             for tgtNode in layer:
-                # initialises an empty array of length next layer
+                # initialise outputNodes as a None array with length of previous layer
                 tgtNode.outputNodes = [None] * len(self.nodes[i + 1])
+                # loops through next layer and sets weights and nodes
                 for x in range(len(self.nodes[i + 1])):
-                    # loops trhough next layer and sets weights and nodes.
                     tgtNode.outputNodes[x] = [self.nodes[i + 1][x], self.nodes[i + 1][x].inputNodes[tgtNode.number][1]]
 
     def saveToFile(self, filePath):
+        # This initialises a string that we will write to the file
         stringToWrite = ""
-        for i in range(len(self.nodes)):
-            layers = self.nodes[i]
-            if (i == 0):
+        # Loops through the nodes array to add the inputNodes weights to the string
+        for i in range(self.layers):
+            layer = self.nodes[i]
+            # Skips the first layer which has no inputs
+            if i == 0:
                 continue
+            # I am using the # as a separator in between layers
             stringToWrite += "#"
-            for node in layers:
+            # Loops through the layer to get all the nodes
+            for node in layer:
+                # I am using the ~ as a separator in between nodes
                 stringToWrite += "~"
+                # Loops through inputNodes to get all the weights
                 for data in node.inputNodes:
+                    # I am using the , as a separator in between weights
                     stringToWrite += ","
                     stringToWrite += str(data[1])
+
+        # This is the separator between biases and weights
         stringToWrite += "|"
+        # Loops through the nodes array to get the layers
         for layers in self.nodes:
+            # I am using the # as a separator between layers
             stringToWrite += "#"
+            # Loops through the layers to get the nodes
             for node in layers:
+                # I am using the ~ as a separator between nodes/biases
                 stringToWrite += "~"
+                # Appends the bias to the string
                 stringToWrite += str(node.bias)
 
+        # Opens the file for overwriting
         file = open(filePath, 'w')
         file.write(stringToWrite)
         file.close()
 
     def loadFromFile(self, filePath):
+        # This opens the file and reads the entire thing as one string
         file = open(filePath, 'r')
         weights = file.read()
         file.close()
+        # Splits for in between biases and weights
         weights = weights.split("|")
-
+        # This entire thing loops through the new data and splits it for each different data type
+        # The while loops remove the extraneous data that comes from splitting strings
         for i in range(len(weights)):
-            if (i == 0):
+            # This is specifically for weights
+            if i == 0:
+                # This splits between layers
                 weights[i] = weights[i].split("#")
                 for x in range(len(weights[i])):
+                    # This splits between nodes
                     weights[i][x] = weights[i][x].split("~")
                     for y in range(len(weights[i][x])):
+                        # This splits between weights
                         weights[i][x][y] = weights[i][x][y].split(",")
                         while '' in weights[i][x][y]:
                             weights[i][x][y].remove('')
@@ -132,40 +155,51 @@ class NeuralNetwork:
                         weights[i][x].remove('')
                 while '' in weights[i]:
                     weights[i].remove('')
-            if (i == 1):
+            # This is specifically for biases
+            if i == 1:
+                # This splits between layers
                 weights[i] = weights[i].split("#")
                 for x in range(len(weights[i])):
+                    # This splits between nodes/biases
                     weights[i][x] = weights[i][x].split("~")
                     while '' in weights[i][x]:
                         weights[i][x].remove('')
                 while '' in weights[i]:
                     weights[i].remove('')
 
+        # This is the final method of removing extraneous data
         weights = [x for x in weights if x]
 
+        # With the data taken and pruned I can now add it to the network.
         for i in range(len(weights)):
-            if (i == 0):
+            # This is for the weights
+            if i == 0:
+                # Loops through the layers to set the inputNodes
                 for x in range(len(weights[i])):
-                    if (x == 0):
+                    # I want to skip the first layer as it has no input Nodes
+                    if x == 0:
                         continue
+                    # More data pruning
                     weights[i][x] = [a for a in weights[i][x] if a]
                     for y in range(len(weights[i][x])):
                         for z in range(len(weights[i][x][y])):
+                            # Sets the inputs Nodes at the same time as converting them to floats
                             self.nodes[x][y].inputNodes[z][1] = float(weights[i][x][y][z])
-            if (i == 1):
+            if i == 1:
+                # More data pruning
                 weights[i] = [a for a in weights[i] if a]
                 for x in range(len(weights[i])):
+                    # More data pruning
                     weights[i][x] = [a for a in weights[i][x] if a]
                     for y in range(len(weights[i][x])):
+                        # Sets the input Nodes at the same time as converting them to floats
                         self.nodes[x][y].bias = float(weights[i][x][y])
 
         for i in range(self.layers):
             layer = self.nodes[i]
-            prevLayerIndex = i + 1
             # To skip the last layer which are the output nodes
-            if (i == self.layers - 1):
+            if i == self.layers - 1:
                 break
-
             # set outputNodes
             for tgtNode in layer:
                 for x in range(len(self.nodes[i + 1])):
@@ -184,7 +218,6 @@ class NeuralNetwork:
             # skips first layer which already has their own outputs
             if i == 0:
                 continue
-
             for node in self.nodes[i]:
                 node.feedForward()
         # gets the output for all the output nodes
@@ -192,20 +225,23 @@ class NeuralNetwork:
             output.append(i.output)
         return output
 
-    def backPropogateCost(self, answer, trueValue):
-        # Initialise cost Matrix with the output layer first
-        lastLayer = util.costFunctionOutputLayer(answer, trueValue)
+    def backPropagateCost(self, answer, trueValue):
+        # Get the output layers error values for usage in the back propagation
+        lastLayer = util.outputCostDerivative(answer, trueValue)
         for i in range(len(lastLayer)):
+            # Sets the output layers errors
             self.nodes[self.layers - 1][i].error = lastLayer[i]
-        # loops through the nodes array to propogate backwards for the error
+        # loops through the nodes array to propagate backwards for the error of each node
         for i in range(self.layers - 1, -1, -1):
-
-            if (i == self.layers - 1):
+            # Skips the last layer as it already has its error
+            if i == self.layers - 1:
                 continue
-
+            # loops through the nodes to set error
             for tgtNode in self.nodes[i]:
                 cost = 0
+                # Sums the error of the node
                 for x in tgtNode.outputNodes:
+                    # This multiplies previous nodes error with the weight connecting both of the nodes
                     cost += x[1] * x[0].error
                 tgtNode.error = cost
 
@@ -214,71 +250,66 @@ class NeuralNetwork:
         for i in range(self.layers):
             layer = self.nodes[i]
             # To skip the first layer which is just inputs and are not actually nodes, so don't have input nodes.
-            if (i == 0):
+            if i == 0:
                 continue
             # updates weights
             for tgtNode in layer:
                 # loops through previous layer and sets weight and nodes
                 for x in tgtNode.inputNodes:
+                    # multiplies the nodes error with the connected nodes output to get the weights specific error
                     x[1] += learningPace * tgtNode.error * x[0].output
+                # I already have the bias error so I just multiply it by a constant to get change
                 tgtNode.bias += learningPace * tgtNode.error
         # This loops through the generated list and sets the output nodes
         for i in range(self.layers):
             layer = self.nodes[i]
-            prevLayerIndex = i + 1
             # To skip the last layer which are the output nodes
-            if (i == self.layers - 1):
+            if i == self.layers - 1:
                 break
-
             # set outputNodes
             for tgtNode in layer:
                 for x in range(len(self.nodes[i + 1])):
                     # loops through next layer and sets weights and nodes.
                     tgtNode.outputNodes[x][1] = self.nodes[i + 1][x].inputNodes[tgtNode.number][1]
 
-    def evaluateCost(self, answer, trueValue):
-        value = 0
-        for i in range(len(answer)):
-            value += (answer[i] - trueValue[i]) ** 2
-        return value
-
     def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace):
         guess = []
         costMean = 0
+        lowestCost = 0.329465111528992
         for x in range(epochs):
             costMean = 0
             for i in range(len(trainingData)):
                 # gets guess and true values
+                # loads the right input array for the feed forward algorithm
                 self.loadInputs(trainingData[i])
+                # generates a guess using the feed forward algorithm
                 guess = self.feedForward()
+                # gets the right answers from the array
                 trueValue = trainingLabels[i]
-                self.backPropogateCost(guess, trueValue)
+                # back propagates error to get the error of each node
+                self.backPropagateCost(guess, trueValue)
+                # updates the weights and biases using the error of the nodes
                 self.updateWeights(learningPace)
-                cost = self.evaluateCost(guess, trueValue)
+                cost = util.evaluateCost(guess, trueValue)
                 costMean += cost
 
-                if(i % 5000 == 0):
-                        if(i != 0):
-                            self.costArray.append(costMean / 5000)
-                        else:
-                            self.costArray.append(costMean)
+                if i % 500 == 0:
+                        # if(i != 0):
+                        #     self.costArray.append(costMean / 500)
+                        # #else:
+                        # #    #self.costArray.append(costMean)
+                        costMean = costMean / 500
                         print("Epoch:", x)
                         print("Rep:", i)
                         print("Guess:", guess)
                         print("Answer:", trueValue)
-                        print("Cost:", costMean / 5000)
-                        if(costMean / 5000 <= 0.05 and i != 0):
-                            self.saveToFile()
-                            return
+                        print("Cost:", costMean)
+                        if costMean <= lowestCost and i != 0:
+                            lowestCost = costMean
+                            print("Saving weights ...")
+                            self.saveToFile(self.path)
                         costMean = 0
-                        print("Saving weights ...")
-                        self.saveToFile(self.path)
                         print("-----------------------------------")
-            if costMean / len(trainingData) >= 0.5:
-                break
-            if costMean / len(trainingData) <= 0.05:
-                self.saveToFile()
-                break
 
     def testNetwork(self, testData, testLabels):
         right = 0

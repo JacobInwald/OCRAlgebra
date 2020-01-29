@@ -15,7 +15,7 @@ def sigmoidDerivative(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
-def costFunctionOutputLayer(answer, trueValue):
+def outputCostDerivative(answer, trueValue):
     value = []
     for i in range(len(answer)):
         y = trueValue[i]
@@ -23,4 +23,11 @@ def costFunctionOutputLayer(answer, trueValue):
         z = sigmoidDerivative(a)
         newCost = 2 * (y - a) * sigmoidDerivative(z)
         value.append(newCost)
+    return value
+
+
+def evaluateCost(answer, trueValue):
+    value = 0
+    for i in range(len(answer)):
+        value += (answer[i] - trueValue[i]) ** 2
     return value
