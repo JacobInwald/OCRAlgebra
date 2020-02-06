@@ -4,25 +4,37 @@ from numba import vectorize
 
 
 def sigmoid(x):
-    if x >= 100000:
+    # This is to stop overflows in this function
+    if x >= 1000:
         return 1
-    elif x <= -100000:
+    elif x <= -1000:
         return 0
     return 1 / (1 + np.exp(-x))
+
+
+def sigmoidInverse(x):
+    if x >= 0.9999999999999999:
+        return 37
+    return np.log(x / (1 - x))
 
 
 def sigmoidDerivative(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
-def outputCostDerivative(answer, trueValue):
+def outputCostDerivative(answer, trueValue, zList):
     value = []
+    # Loops through the outputs and calculates the derivative of the cost function for each of them
     for i in range(len(answer)):
+        # This is intended output
         y = trueValue[i]
+        # This is the activation of the node
         a = answer[i]
-        z = sigmoidDerivative(a)
-        newCost = 2 * (y - a) * sigmoidDerivative(z)
-        value.append(newCost)
+        # This is the summed value of the weights times the inputs added to the bias of the node
+        z = zList[i]
+        # This is the derivative of the cost function
+        newCostDerivative = 2 * (y - a) * sigmoidDerivative(z)
+        value.append(newCostDerivative)
     return value
 
 

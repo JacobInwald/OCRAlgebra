@@ -48,10 +48,10 @@ testLabelsOneHot = (lr == testLabels).astype(np.float)
 
 # making sure 0.01s and 0.99s are used
 
-trainingLabelsOneHot[trainingLabelsOneHot == 0] = 0
+trainingLabelsOneHot[trainingLabelsOneHot == 0] = 0.01
 trainingLabelsOneHot[trainingLabelsOneHot == 1] = 0.99
 
-testLabelsOneHot[testLabelsOneHot == 0] = 0
+testLabelsOneHot[testLabelsOneHot == 0] = 0.01
 testLabelsOneHot[testLabelsOneHot == 1] = 0.99
 
 timeTaken = datetime.now() - start
@@ -59,7 +59,7 @@ timeTaken = datetime.now() - start
 print("Time taken:", timeTaken)
 
 # Here we will implement the neural network code and use it to train.
-neuralNetwork = nn.NeuralNetwork([784, 20, 16, 10], True, "data/weights.txt")
-neuralNetwork.trainNetwork(trainingImages, trainingLabelsOneHot, 20, 0.001)
-neuralNetwork = nn.NeuralNetwork([784, 20, 16, 10], True, "data/weights.txt")
+neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10], True, "data/weights.txt")
+neuralNetwork.trainNetwork(trainingImages, trainingLabelsOneHot, 20, 0.01, 0, 0.05)
+neuralNetwork = nn.NeuralNetwork([784, 16, 16, 10], True, "data/weights.txt")
 neuralNetwork.testNetwork(testImages, testLabels)

@@ -19,13 +19,19 @@ class Node:
         self.bias = bias
         self.activationFunction = util.sigmoid
         self.output = output
+        self.z = util.sigmoidDerivative(output)
         self.error = 0
+        # Momentum variable used to make sure the node continues on its trend from preivous iterations.
+        self.momentum = 0
+        self.prevOutput = 0
         # This is an id that stores position in the nodes array
         self.number = number
 
     def feedForward(self):
         # This just sums the input nodes outputs and then passes that values through an activation function
-        self.output = self.activationFunction(self.sumInputs() + self.bias)
+        self.prevOutput = self.output
+        self.z = self.sumInputs() + self.bias
+        self.output = self.activationFunction(self.z)
 
     def sumInputs(self):
         # Loops through all the inputs and sums the weights and activation
@@ -42,13 +48,12 @@ class NeuralNetwork:
         self.nodes = [[] for _ in nodeNumbers]
         self.layers = len(nodeNumbers)
         self.generateNetwork(nodeNumbers)
+        self.zList = []
         # This uses the next two parameters to check whether the network is being loaded from a file and if
         # not overwrites to the file specified
         self.path = filePath
-        if not loadFromFile:
-            self.saveToFile(self.path)
-        else:
-            self.loadFromFile(self.path)
+        if loadFromFile:
+           self.loadFromFile(self.path)
         # This initialises an empty array that can be used to plot data with matplot
         self.costArray = []
 
@@ -74,7 +79,7 @@ class NeuralNetwork:
                 tgtNode.inputNodes = [None] * len(self.nodes[i - 1])
                 # loops through previous layer and sets weight and nodes
                 for x in range(len(self.nodes[i - 1])):
-                    tgtNode.inputNodes[x] = [self.nodes[i - 1][x], random.uniform(-1, 1)]
+                    tgtNode.inputNodes[x] = [self.nodes[i - 1][x], random.uniform(-0.5, 0.5)]
 
         # This loops through the generated list and sets the output nodes
         for i in range(self.layers):
@@ -222,12 +227,14 @@ class NeuralNetwork:
                 node.feedForward()
         # gets the output for all the output nodes
         for i in self.nodes[len(self.nodes) - 1]:
+            self.zList.append(i.z)
             output.append(i.output)
         return output
 
     def backPropagateCost(self, answer, trueValue):
         # Get the output layers error values for usage in the back propagation
-        lastLayer = util.outputCostDerivative(answer, trueValue)
+        lastLayer = util.outputCostDerivative(answer, trueValue, self.zList)
+        self.zList = []
         for i in range(len(lastLayer)):
             # Sets the output layers errors
             self.nodes[self.layers - 1][i].error = lastLayer[i]
@@ -241,11 +248,13 @@ class NeuralNetwork:
                 cost = 0
                 # Sums the error of the node
                 for x in tgtNode.outputNodes:
-                    # This multiplies previous nodes error with the weight connecting both of the nodes
-                    cost += x[1] * x[0].error
+                    # This multiplies previous nodes error with the weight connecting both of the nodes to get the error
+                    # of the node, this is because of the chain rule.
+                    cost += x[0].error * x[1] * util.sigmoidDerivative(tgtNode.z)
+                tgtNode.momentum = tgtNode.error
                 tgtNode.error = cost
 
-    def updateWeights(self, learningPace):
+    def updateWeights(self, learningPace, momentumPace):
         # This loops through the generated list and sets the input nodes
         for i in range(self.layers):
             layer = self.nodes[i]
@@ -257,7 +266,8 @@ class NeuralNetwork:
                 # loops through previous layer and sets weight and nodes
                 for x in tgtNode.inputNodes:
                     # multiplies the nodes error with the connected nodes output to get the weights specific error
-                    x[1] += learningPace * tgtNode.error * x[0].output
+                    # This is temporary code to check out momentum
+                    x[1] += learningPace * tgtNode.error * x[0].output + momentumPace * tgtNode.momentum * x[0].prevOutput
                 # I already have the bias error so I just multiply it by a constant to get change
                 tgtNode.bias += learningPace * tgtNode.error
         # This loops through the generated list and sets the output nodes
@@ -272,10 +282,13 @@ class NeuralNetwork:
                     # loops through next layer and sets weights and nodes.
                     tgtNode.outputNodes[x][1] = self.nodes[i + 1][x].inputNodes[tgtNode.number][1]
 
-    def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace):
+    def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace, momentumPace, lowestCost):
         guess = []
+        costArray = []
         costMean = 0
-        lowestCost = 0.329465111528992
+        lp = learningPace
+        mp = momentumPace
+        lowestCost = lowestCost
         for x in range(epochs):
             costMean = 0
             for i in range(len(trainingData)):
@@ -289,62 +302,63 @@ class NeuralNetwork:
                 # back propagates error to get the error of each node
                 self.backPropagateCost(guess, trueValue)
                 # updates the weights and biases using the error of the nodes
-                self.updateWeights(learningPace)
+                self.updateWeights(lp, mp)
                 cost = util.evaluateCost(guess, trueValue)
                 costMean += cost
 
-                if i % 500 == 0:
-                        # if(i != 0):
-                        #     self.costArray.append(costMean / 500)
-                        # #else:
-                        # #    #self.costArray.append(costMean)
-                        costMean = costMean / 500
-                        print("Epoch:", x)
-                        print("Rep:", i)
-                        print("Guess:", guess)
-                        print("Answer:", trueValue)
-                        print("Cost:", costMean)
-                        if costMean <= lowestCost and i != 0:
-                            lowestCost = costMean
-                            print("Saving weights ...")
-                            self.saveToFile(self.path)
-                        costMean = 0
-                        print("-----------------------------------")
+                if i % 1000 == 0:
+                    if i != 0:
+                        costMean = costMean / 1000
+                    # costArray.append(costMean)
+                    print("Epoch:", x)
+                    print("Rep:", i)
+                    print("Guess:", guess)
+                    print("Answer:", trueValue)
+                    print("Loss:", costMean)
+                    if costMean <= lowestCost and i != 0:
+                        lowestCost = costMean
+                        print("Saving weights ...")
+                        self.saveToFile(self.path)
+                    costMean = 0
+                    print("-----------------------------------")
+                # if i % 10000 == 0:
+                #     plt.plot(costArray)
+                #     plt.xlabel("Epochs")
+                #     plt.ylabel("Cost")
+                #     plt.show()
 
     def testNetwork(self, testData, testLabels):
         right = 0
+        numbersRight = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        # This is for testing percentages of the neural network getting it correctly
         for i in range(len(testData)):
             self.loadInputs(testData[i])
             guess = self.feedForward()
             trueValue = testLabels[i]
             correct = int(trueValue[0])
             runningTotal = 0
-            for i in guess:
-                if i >= runningTotal:
-                    runningTotal = i
-                    answer = guess.index(i)
-            # for i in trueValue:
-            #     if i >= runningTotal:
-            #         runningTotal = i
-            #         correct = trueValue.index(i)
+            for x in guess:
+                if x >= runningTotal:
+                    runningTotal = x
+                    answer = guess.index(x)
 
             if correct == answer:
                 right += 1
-        print("Percentage correct:", (right * 100) / len(testData), "%")
+                numbersRight[correct - 1] += 1
+            if i >= 9980:
+                img = testData[i].reshape((28, 28))
+                plt.imshow(img, cmap="Greys")
+                print("Right Answer: ", correct)
+                print("Guess: ", answer)
+                plt.show()
+                print("----------------")
+        print("Total percentage correct:", (right * 100) / len(testData), "%")
+        for correct in numbersRight:
+            print("Percentage correct for", numbersRight.index(correct) + 1, "is:", (correct * 100) / (len(testData) / 10), "%")
+        plt.show()
+        input("Enter to close the program")
 
 
-    def giveAnswer(self, inputArray):
-        # does all the stuff at once
-        self.loadInputs(inputArray)
-        output = self.feedForward()
-        answer = [0, 0]
-        for i in output:
-            if (i >= answer[1]):
-                answer[0] = output.index(i)
-                answer[1] = i
-        return answer
-#
-#
 # dataset = [[2.7810836, 2.550537003],
 #            [1.465489372, 2.362125076],
 #            [3.396561688, 4.400293529],
