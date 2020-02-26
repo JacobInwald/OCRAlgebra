@@ -216,6 +216,13 @@ class NeuralNetwork:
         for i in range(len(inputArray)):
             self.nodes[0][i].output = inputArray[i]
 
+    def getNewPaces(self, path):
+        data = open(path)
+        data =  data.readlines()
+        lp = float(data[0])
+        mp = float(data[1])
+        return lp, mp
+
     def feedForward(self):
         output = []
         # does all the feed forwards for all the nodes
@@ -250,9 +257,9 @@ class NeuralNetwork:
                 for x in tgtNode.outputNodes:
                     # This multiplies previous nodes error with the weight connecting both of the nodes to get the error
                     # of the node, this is because of the chain rule.
-                    cost += x[0].error * x[1] * util.sigmoidDerivative(tgtNode.z)
+                    cost += x[0].error * x[1]
                 tgtNode.momentum = tgtNode.error
-                tgtNode.error = cost
+                tgtNode.error = cost * util.sigmoidDerivative(tgtNode.z)
 
     def updateWeights(self, learningPace, momentumPace):
         # This loops through the generated list and sets the input nodes
@@ -267,7 +274,7 @@ class NeuralNetwork:
                 for x in tgtNode.inputNodes:
                     # multiplies the nodes error with the connected nodes output to get the weights specific error
                     # This is temporary code to check out momentum
-                    x[1] += learningPace * tgtNode.error * x[0].output + momentumPace * tgtNode.momentum * x[0].prevOutput
+                    x[1] += learningPace * tgtNode.error * x[0].output + learningPace * momentumPace * tgtNode.momentum * x[0].prevOutput
                 # I already have the bias error so I just multiply it by a constant to get change
                 tgtNode.bias += learningPace * tgtNode.error
         # This loops through the generated list and sets the output nodes
@@ -306,41 +313,48 @@ class NeuralNetwork:
                 cost = util.evaluateCost(guess, trueValue)
                 costMean += cost
 
-                if i % 1000 == 0:
+                if (i + 1) % 10000 == 0 or i == 0:
                     if i != 0:
-                        costMean = costMean / 1000
-                    # costArray.append(costMean)
+                        costMean = costMean / 10000
+                    paces = self.getNewPaces("data/learningPace.txt")
+                    lp = paces[0]
+                    mp = paces[1]
+                    costArray.append(costMean)
                     print("Epoch:", x)
-                    print("Rep:", i)
+                    print("Rep:", i + 1)
                     print("Guess:", guess)
                     print("Answer:", trueValue)
+                    print("Learning Pace:", lp)
                     print("Loss:", costMean)
                     if costMean <= lowestCost and i != 0:
                         lowestCost = costMean
                         print("Saving weights ...")
                         self.saveToFile(self.path)
+                    if costMean <= 0.001 and i != 0:
+                        return
                     costMean = 0
                     print("-----------------------------------")
-                # if i % 10000 == 0:
-                #     plt.plot(costArray)
-                #     plt.xlabel("Epochs")
-                #     plt.ylabel("Cost")
-                #     plt.show()
 
-    def testNetwork(self, testData, testLabels):
+        plt.plot(costArray)
+        plt.xlabel("Epochs")
+        plt.ylabel("Cost")
+        plt.show()
+
+    def testNetwork(self, testData, testLabels, rightNumber):
         right = 0
         numbersRight = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         # This is for testing percentages of the neural network getting it correctly
         for i in range(len(testData)):
             self.loadInputs(testData[i])
             guess = self.feedForward()
-            trueValue = testLabels[i]
-            correct = int(trueValue[0])
+            correct = testLabels[i].index(rightNumber)
             runningTotal = 0
             for x in guess:
                 if x >= runningTotal:
                     runningTotal = x
                     answer = guess.index(x)
+            print("Guess", answer, guess)
+            print("Answer", correct)
 
             if correct == answer:
                 right += 1
@@ -358,6 +372,17 @@ class NeuralNetwork:
         plt.show()
         input("Enter to close the program")
 
+    def getAnswer(self, input):
+        self.loadInputs(input)
+        answer = self.feedForward()
+        x = 0
+        for i in answer:
+            if i > x:
+                x = i
+        guess = answer.index(x)
+        return guess, x
+
+
 
 # dataset = [[2.7810836, 2.550537003],
 #            [1.465489372, 2.362125076],
@@ -369,48 +394,27 @@ class NeuralNetwork:
 #            [6.922596716, 1.77106367],
 #            [8.675418651, -0.242068655],
 #            [7.673756466, 3.508563011]]
-# # trueValue = [[0.01, 0.99],
-# #              [0.01, 0.99],
-# #              [0.01, 0.99],
-# #              [0.01, 0.99],
-# #              [0.01, 0.99],
-# #              [0.99, 0.01],
-# #              [0.99, 0.01],
-# #              [0.99, 0.01],
-# #              [0.99, 0.01],
-# #              [0.99, 0.01]]
-# trueValue = [[0, 1],
-#              [0, 1],
-#              [0, 1],
-#              [0, 1],
-#              [0, 1],
-#              [1, 0],
-#              [1, 0],
-#              [1, 0],
-#              [1, 0],
-#              [1, 0]]
-# # count = 10
-# # costMean = 0
-# # costArray = []
-# # nn = NeuralNetwork([2, 3, 2], False)
-# # good = False
-# # while not good:
-# #     nn = NeuralNetwork([2, 3, 2], False, "data/weights.txt")
-# #     nn.trainNetwork(dataset, trueValue, 10, 0.5)
-# #     for i in dataset:
-# #         nn.loadInputs(i)
-# #         costMean += nn.evaluateCost(nn.feedForward(), trueValue[dataset.index(i)])
-# #     costArray.append(costMean)
-# #     if costMean <= 0.05:
-# #         nn.saveToFile()
-# #         good = True
-# #     costMean = 0
-# #
-# # plt.plot(costArray)
-# # plt.ylabel("Cost")
-# # plt.xlabel("Attempts")
-# # plt.show()
+# trueValue = [[0.01, 0.99],
+#              [0.01, 0.99],
+#              [0.01, 0.99],
+#              [0.01, 0.99],
+#              [0.01, 0.99],
+#              [0.99, 0.01],
+#              [0.99, 0.01],
+#              [0.99, 0.01],
+#              [0.99, 0.01],
+#              [0.99, 0.01]]
+# # trueValue = [[0, 1],
+# #              [0, 1],
+# #              [0, 1],
+# #              [0, 1],
+# #              [0, 1],
+# #              [1, 0],
+# #              [1, 0],
+# #              [1, 0],
+# #              [1, 0],
+# #              [1, 0]]
 #
-# nn = NeuralNetwork([2, 3, 2], False, "data/weights.txt")
-# nn.trainNetwork(dataset, trueValue, 100000, 1)
-# nn.testNetwork(dataset, trueValue)
+# nn = NeuralNetwork([2, 3, 2], False, "data/testWeights.txt")
+# nn.trainNetwork(dataset, trueValue, 10000, 0.5, 0, 0.000000216)
+# nn.testNetwork(dataset, trueValue, 0.99)

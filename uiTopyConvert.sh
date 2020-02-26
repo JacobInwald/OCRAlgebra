@@ -1,0 +1,2 @@
+cd C:\Users\Jacob\AppData\Local\Programs\Python\Python38\Lib\site-packages\PyQt5
+pyuic5 -x C:\Users\Jacob\OneDrive\Desktop\CompSci\neuralnetworkgui.ui -o C:\Users\Jacob\OneDrive\Desktop\CompSci\nngui.py

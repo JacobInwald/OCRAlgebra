@@ -1,6 +1,8 @@
 # This is a class that acts as a library for nescesary methods
 import numpy as np
-from numba import vectorize
+from PIL import Image
+
+# Neural network utilities
 
 
 def sigmoid(x):
@@ -43,3 +45,35 @@ def evaluateCost(answer, trueValue):
     for i in range(len(answer)):
         value += (answer[i] - trueValue[i]) ** 2
     return value
+
+# Image manipulation
+
+
+def loadImage(path):
+    size = 28, 28
+    im = Image.open(path).convert('LA')
+    im.thumbnail(size)
+    return im
+
+
+def cleanImage(image):
+    width, height = image.size
+    array = []
+    adjust = 0.99 / 255
+    for y in range(height):
+        for x in range(width):
+            white, black = image.getpixel((x, y))
+            if white == 255 and black == 255:
+                array.append(0)
+                continue
+            elif white == 0 and black == 255:
+                array.append(1)
+                continue
+            elif white > black:
+                array.append((white - black) * adjust)
+                continue
+            else:
+                array.append((black - white) * adjust)
+                continue
+    array = np.array(array)
+    return array
