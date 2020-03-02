@@ -213,7 +213,7 @@ class NeuralNetwork:
 
     def getNewPaces(self, path):
         data = open(path)
-        data =  data.readlines()
+        data = data.readlines()
         lp = float(data[0])
         mp = float(data[1])
         return lp, mp
@@ -221,16 +221,13 @@ class NeuralNetwork:
     def feedForward(self):
         output = []
         # does all the feed forwards for all the nodes
-        for i in range(len(self.nodes)):
+        for layer in self.nodes:
             # skips first layer which already has their own outputs
-            if i == 0:
+            if self.nodes.index(layer) == 0:
                 continue
-            for node in self.nodes[i]:
-                node.feedForward()
 
-        for i in self.nodes[len(self.nodes) - 1]:
-            output.append(i.output)
-        return output
+            for node in layer:
+                node.feedForward()
 
     def backPropagateCost(self, trueValue):
         # Get the output layers error values for usage in the back propagation
@@ -239,6 +236,7 @@ class NeuralNetwork:
             # This is the derivative of the cost function
             newCostDerivative = 2 * (trueValue[i] - self.nodes[self.layers - 1][i].output) * util.sigmoidDerivative(self.nodes[self.layers - 1][i].z)
             self.nodes[self.layers - 1][i].error = newCostDerivative
+
         # loops through the nodes array to propagate backwards for the error of each node
         for i in range(self.layers - 1, -1, -1):
             # Skips the last layer as it already has its error
@@ -252,10 +250,10 @@ class NeuralNetwork:
                     # This multiplies previous nodes error with the weight connecting both of the nodes to get the error
                     # of the node, this is because of the chain rule.
                     cost += x[0].error * x[1]
-                tgtNode.momentum = tgtNode.error
-                tgtNode.error = cost * util.sigmoidDerivative(tgtNode.z)
+                # tgtNode.momentum = tgtNode.error
+                tgtNode.error += cost * util.sigmoidDerivative(tgtNode.z)
 
-    def updateWeights(self, learningPace, momentumPace):
+    def updateWeights(self, learningPace, momentumPace, batchSize):
         # This loops through the generated list and sets the input nodes
         for i in range(self.layers):
             layer = self.nodes[i]
@@ -265,37 +263,37 @@ class NeuralNetwork:
             # updates weights
             for tgtNode in layer:
                 # loops through previous layer and sets weight and nodes
-                biasDelta = learningPace * tgtNode.error
                 for x in tgtNode.inputNodes:
                     # multiplies the nodes error with the connected nodes output to get the weights specific error
                     # This is temporary code to check out momentum
-                    x[1] += biasDelta * x[0].output
+                    x[1] += learningPace * (tgtNode.error / batchSize) * x[0].output + learningPace * momentumPace * tgtNode.momentum * x[0].prevOutput
                     x[0].outputNodes[tgtNode.number][1] = x[1]
                 # I already have the bias error so I just multiply it by a constant to get change
-                tgtNode.bias += biasDelta
+                tgtNode.bias += learningPace * (tgtNode.error / batchSize)
 
-    def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace, momentumPace, lowestCost):
+
+    def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace, batchSize, momentumPace, lowestCost):
         guess = []
         costArray = []
         costMean = 0
         lp = learningPace
         mp = momentumPace
         lowestCost = lowestCost
-        for x in range(epochs):
+        for x in tqdm(range(epochs)):
             costMean = 0
-            for i in tqdm(range(len(trainingData))):
+            for i in range(len(trainingData)):
                 # gets guess and true values
                 # loads the right input array for the feed forward algorithm
                 self.loadInputs(trainingData[i])
                 # generates a guess using the feed forward algorithm
-                guess = self.feedForward()
+                self.feedForward()
                 # gets the right answers from the array
                 trueValue = trainingLabels[i]
                 # back propagates error to get the error of each node
                 self.backPropagateCost(trueValue)
                 # updates the weights and biases using the error of the nodes
-                self.updateWeights(lp, mp)
-
+                if (i + 1) % batchSize == 0:
+                    self.updateWeights(lp, mp, batchSize)
                 cost = util.evaluateCost(guess, trueValue)
                 costMean += cost
 
@@ -317,7 +315,7 @@ class NeuralNetwork:
                         print("Saving weights ...")
                         self.saveToFile(self.path)
                     if costMean <= 0.001 and i != 0:
-                        break
+                        return
                     costMean = 0
                     print("-----------------------------------")
 
@@ -330,22 +328,22 @@ class NeuralNetwork:
         right = 0
         numbersRight = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         # This is for testing percentages of the neural network getting it correctly
-        for i in tqdm(range(len(testData))):
-            guess = self.getAnswer(testData[i])
-            labels = testLabels[i].tolist()
-            correct = labels.index(rightNumber)
+        for i in range(len(testData)):
+            self.loadInputs(testData[i])
+            guess = self.feedForward()
+            correct = testLabels[i].index(rightNumber)
             runningTotal = 0
             for x in guess:
                 if x >= runningTotal:
                     runningTotal = x
                     answer = guess.index(x)
-            # print("Guess", answer, guess)
-            # print("Answer", correct)
+            print("Guess", answer, guess)
+            print("Answer", correct)
 
             if correct == answer:
                 right += 1
                 numbersRight[correct - 1] += 1
-            if i >= 9990:
+            if i >= 9980:
                 img = testData[i].reshape((28, 28))
                 plt.imshow(img, cmap="Greys")
                 print("Right Answer: ", correct)
@@ -377,42 +375,40 @@ class NeuralNetwork:
             if i > x:
                 x = i
         guess = output.index(x)
-        # return str(guess) + " with " + str(x) + " activation."
-        return output
+        return str(guess) + " with " + str(x) + " activation."
 
 
 
-# dataset = [[2.7810836, 2.550537003],
-#            [1.465489372, 2.362125076],
-#            [3.396561688, 4.400293529],
-#            [1.38807019, 1.850220317],
-#            [3.06407232, 3.005305973],
-#            [7.627531214, 2.759262235],
-#            [5.332441248, 2.088626775],
-#            [6.922596716, 1.77106367],
-#            [8.675418651, -0.242068655],
-#            [7.673756466, 3.508563011]]
-# trueValue = [[0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.99, 0.01],
-#              [0.99, 0.01],
-#              [0.99, 0.01],
-#              [0.99, 0.01],
-#              [0.99, 0.01]]
-# # trueValue = [[0, 1],
-# #              [0, 1],
-# #              [0, 1],
-# #              [0, 1],
-# #              [0, 1],
-# #              [1, 0],
-# #              [1, 0],
-# #              [1, 0],
-# #              [1, 0],
-# #              [1, 0]]
-#
-# nn = NeuralNetwork([2, 3, 2], False, "data/testWeights.txt")
-# nn.trainNetwork(dataset, trueValue, 10000, 0.5, 0, 0.000000000000001)
-# nn.testNetwork(dataset, trueValue, 0.99)
+dataset = [[1.38807019, 1.850220317],
+           [3.06407232, 3.005305973],
+           [7.627531214, 2.759262235],
+           [5.332441248, 2.088626775],
+           [6.922596716, 1.77106367],
+           [3.396561688, 4.400293529],
+           [8.675418651, -0.242068655],
+           [2.7810836, 2.550537003],
+           [7.673756466, 3.508563011],
+           [1.465489372, 2.362125076]]
+trueValue = [[0.01, 0.99],
+             [0.01, 0.99],
+             [0.01, 0.99],
+             [0.01, 0.99],
+             [0.01, 0.99],
+             [0.99, 0.01],
+             [0.01, 0.99],
+             [0.99, 0.01],
+             [0.01, 0.99]]
+# trueValue = [[0, 1],
+#              [0, 1],
+#              [0, 1],
+#              [0, 1],
+#              [0, 1],
+#              [1, 0],
+#              [1, 0],
+#              [1, 0],
+#              [1, 0],
+#              [1, 0]]
+
+nn = NeuralNetwork([2, 3, 2], False, "data/testWeights.txt")
+nn.trainNetwork(dataset, trueValue, 10000, 10, 0.5, 0, 0.000000000000001)
+nn.testNetwork(dataset, trueValue, 0.99)

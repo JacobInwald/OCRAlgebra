@@ -7,16 +7,10 @@ from PIL import Image
 
 def sigmoid(x):
     # This is to stop overflows in this function
-    if x >= 1000:
-        return 1
-    elif x <= -1000:
-        return 0
     return 1 / (1 + np.exp(-x))
 
 
 def sigmoidInverse(x):
-    if x >= 0.9999999999999999:
-        return 37
     return np.log(x / (1 - x))
 
 
@@ -24,18 +18,12 @@ def sigmoidDerivative(x):
     return sigmoid(x) * (1 - sigmoid(x))
 
 
-def outputCostDerivative(answer, trueValue, zList):
+def outputCostDerivative(layer, trueValue):
     value = []
     # Loops through the outputs and calculates the derivative of the cost function for each of them
-    for i in range(len(answer)):
-        # This is intended output
-        y = trueValue[i]
-        # This is the activation of the node
-        a = answer[i]
-        # This is the summed value of the weights times the inputs added to the bias of the node
-        z = zList[i]
+    for i in range(len(trueValue)):
         # This is the derivative of the cost function
-        newCostDerivative = 2 * (y - a) * sigmoidDerivative(z)
+        newCostDerivative = 2 * (trueValue[i] - layer[i].output) * sigmoidDerivative(layer[i].z)
         value.append(newCostDerivative)
     return value
 
@@ -49,11 +37,18 @@ def evaluateCost(answer, trueValue):
 # Image manipulation
 
 
-def loadImage(path):
+def loadImageFromPath(path):
     size = 28, 28
     im = Image.open(path).convert('LA')
     im.thumbnail(size)
     return im
+
+
+def loadImageFromPIL(img):
+    size = 28, 28
+    img = img.convert('LA')
+    img.thumbnail(size)
+    return img
 
 
 def cleanImage(image):
