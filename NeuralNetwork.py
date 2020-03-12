@@ -48,7 +48,7 @@ class NeuralNetwork:
         # not overwrites to the file specified
         self.path = filePath
         if loadFromFile:
-           self.loadFromFile(self.path)
+            self.loadFromFile(self.path)
         # This initialises an empty array that can be used to plot data with matplot
         self.costArray = []
 
@@ -212,10 +212,11 @@ class NeuralNetwork:
             self.nodes[0][i].output = inputArray[i]
 
     def getNewPaces(self, path):
-        data = open(path)
-        data =  data.readlines()
+        text = open(path)
+        data = text.readlines()
         lp = float(data[0])
         mp = float(data[1])
+        text.close()
         return lp, mp
 
     def feedForward(self):
@@ -239,6 +240,7 @@ class NeuralNetwork:
             # This is the derivative of the cost function
             newCostDerivative = 2 * (trueValue[i] - self.nodes[self.layers - 1][i].output) * util.sigmoidDerivative(self.nodes[self.layers - 1][i].z)
             self.nodes[self.layers - 1][i].error = newCostDerivative
+
         # loops through the nodes array to propagate backwards for the error of each node
         for i in range(self.layers - 1, -1, -1):
             # Skips the last layer as it already has its error
@@ -252,10 +254,9 @@ class NeuralNetwork:
                     # This multiplies previous nodes error with the weight connecting both of the nodes to get the error
                     # of the node, this is because of the chain rule.
                     cost += x[0].error * x[1]
-                tgtNode.momentum = tgtNode.error
-                tgtNode.error = cost * util.sigmoidDerivative(tgtNode.z)
+                tgtNode.error += cost * util.sigmoidDerivative(tgtNode.z)
 
-    def updateWeights(self, learningPace, momentumPace):
+    def updateWeights(self, learningPace):
         # This loops through the generated list and sets the input nodes
         for i in range(self.layers):
             layer = self.nodes[i]
@@ -268,18 +269,15 @@ class NeuralNetwork:
                 biasDelta = learningPace * tgtNode.error
                 for x in tgtNode.inputNodes:
                     # multiplies the nodes error with the connected nodes output to get the weights specific error
-                    # This is temporary code to check out momentum
                     x[1] += biasDelta * x[0].output
                     x[0].outputNodes[tgtNode.number][1] = x[1]
                 # I already have the bias error so I just multiply it by a constant to get change
                 tgtNode.bias += biasDelta
+                tgtNode.error = 0
 
-    def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace, momentumPace, lowestCost):
-        guess = []
+    def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace, lowestCost):
         costArray = []
-        costMean = 0
         lp = learningPace
-        mp = momentumPace
         lowestCost = lowestCost
         for x in range(epochs):
             costMean = 0
@@ -294,7 +292,7 @@ class NeuralNetwork:
                 # back propagates error to get the error of each node
                 self.backPropagateCost(trueValue)
                 # updates the weights and biases using the error of the nodes
-                self.updateWeights(lp, mp)
+                self.updateWeights(lp)
 
                 cost = util.evaluateCost(guess, trueValue)
                 costMean += cost
@@ -328,6 +326,7 @@ class NeuralNetwork:
 
     def testNetwork(self, testData, testLabels, rightNumber):
         right = 0
+        answer = -1
         numbersRight = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         # This is for testing percentages of the neural network getting it correctly
         for i in tqdm(range(len(testData))):
@@ -354,7 +353,8 @@ class NeuralNetwork:
                 print("----------------")
         print("Total percentage correct:", (right * 100) / len(testData), "%")
         for correct in numbersRight:
-            print("Percentage correct for", numbersRight.index(correct) + 1, "is:", (correct * 100) / (len(testData) / 10), "%")
+            print("Percentage correct for", numbersRight.index(correct) + 1, "is:",
+                  (correct * 100) / (len(testData) / 10), "%")
         plt.show()
         input("Enter to close the program")
 
@@ -377,10 +377,8 @@ class NeuralNetwork:
             if i > x:
                 x = i
         guess = output.index(x)
-        # return str(guess) + " with " + str(x) + " activation."
-        return output
-
-
+        return str(guess) + " with " + str(x) + " activation."
+        # return output
 
 # dataset = [[2.7810836, 2.550537003],
 #            [1.465489372, 2.362125076],
@@ -414,5 +412,5 @@ class NeuralNetwork:
 # #              [1, 0]]
 #
 # nn = NeuralNetwork([2, 3, 2], False, "data/testWeights.txt")
-# nn.trainNetwork(dataset, trueValue, 10000, 0.5, 0, 0.000000000000001)
+# nn.trainNetwork(dataset, trueValue, 10000, 1, 0, 10, 0.1)
 # nn.testNetwork(dataset, trueValue, 0.99)

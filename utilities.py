@@ -1,6 +1,7 @@
 # This is a class that acts as a library for nescesary methods
 import numpy as np
 from PIL import Image
+import matplotlib.pyplot as plt
 
 # Neural network utilities
 
@@ -49,6 +50,26 @@ def loadImageFromPIL(img):
     img = img.convert('LA')
     img.thumbnail(size)
     return img
+
+def centreImage(img):
+    width, height = img.size
+    left, right, top, bottom = 100000000000, 0, 0, 0
+    tgtImg = Image.new('LA', (width, height))
+    for y in range(height):
+        for x in range(width):
+            tgtImg.putpixel((x, y), (255, 255))
+            white, black = img.getpixel((x, y))
+            if white != 255 or black != 255:
+                if x < left:
+                    left = x
+                if x > right:
+                    right = x
+                if top == 0:
+                    top = y
+                bottom = y
+    img = img.crop((left, top, right, bottom))
+    tgtImg.paste(img, (int((width / 2) - (right - left) / 2), int((height / 2) - (bottom - top) / 2)))
+    return tgtImg
 
 
 def cleanImage(image):

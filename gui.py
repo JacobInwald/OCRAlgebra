@@ -195,6 +195,7 @@ class Ui_MainWindow(object):
         self.string += "\nDone!\nConverting PIL Image to greyscale array ..."
         self.terminalUpdate(self.string)
         img = util.loadImageFromPIL(img)
+        img = util.centreImage(img)
         data = util.cleanImage(img)
         img = data.reshape((28, 28))
         plt.imshow(img, cmap="Greys")
@@ -215,4 +216,4 @@ def start(nn):
     sys.exit(app.exec_())
 
 
-# start(nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights784,24,16,10.txt"))
+start(nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights[1].txt"))
