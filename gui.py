@@ -1,13 +1,12 @@
 import sys
-from PyQt5 import QtCore, QtGui, QtWidgets, uic
 import io
-from PIL import Image
-import utilities as util
 import matplotlib.pyplot as plt
+from PIL import Image
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QBuffer, pyqtSlot
 import NeuralNetwork as nn
-import time
-from datetime import datetime
+import utilities as util
+
 
 class Canvas(QtWidgets.QLabel):
     def __init__(self):
@@ -65,7 +64,7 @@ class Canvas(QtWidgets.QLabel):
         return pilIm
 
 
-class Ui_MainWindow(object):
+class UiMainWindow(object):
 
     def setupUi(self, MainWindow, nn):
 
@@ -189,31 +188,36 @@ class Ui_MainWindow(object):
 
     @pyqtSlot()
     def onRunClick(self, nn):
+        finalAnswer = ""
         self.string += "Converting canvas to PIL Image ..."
         self.terminalUpdate(self.string)
         img = self.canvas.convertPixmapToImage()
         self.string += "\nDone!\nConverting PIL Image to greyscale array ..."
         self.terminalUpdate(self.string)
         img = util.loadImageFromPIL(img)
-        img = util.centreImage(img)
-        data = util.cleanImage(img)
-        img = data.reshape((28, 28))
-        plt.imshow(img, cmap="Greys")
-        plt.show()
-        self.string += "\nDone!\nFeeding inputs to neural network ..."
-        self.terminalUpdate(self.string)
-        answer = nn.getAnswer(data)
-        self.string += "\nDone!\n" + answer + "\n------------------------------------------------\n"
+        imgArray = util.cropOutNumbers(img)
+        for image in imgArray:
+            img = util.centreImage(image)
+            data = util.cleanImage(img)
+            img = data.reshape((28, 28))
+            plt.imshow(img, cmap="Greys")
+            plt.show()
+            self.string += "\nDone!\nFeeding inputs to neural network ..."
+            self.terminalUpdate(self.string)
+            answer, activation = nn.getAnswer(data)
+            finalAnswer += answer
+            self.string += "\nDone!\nAnswer is: " + answer + " with " + activation + " activation.\n------------------------------------------------\n"
+        self.string += "\nFinal Answer is: " + finalAnswer + "\n------------------------------------------------\n"
         self.terminalUpdate(self.string)
 
 
 def start(nn):
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
-    ui = Ui_MainWindow()
+    ui = UiMainWindow()
     ui.setupUi(MainWindow, nn)
     MainWindow.show()
     sys.exit(app.exec_())
 
 
-start(nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights[1].txt"))
+# start(nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights[1].txt"))

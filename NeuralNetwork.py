@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import utilities as util
 import random
 from tqdm import tqdm
-import numpy as np
 
 
 class Node:
@@ -52,9 +51,12 @@ class NeuralNetwork:
         # This initialises an empty array that can be used to plot data with matplot
         self.costArray = []
 
-    # generates a connected network based on an array of numbers e.g. [784, 16, 16, 10]
     def generateNetwork(self, nodeNumbers):
-        # generates an array of nodes that is of the same size specified
+        # This initialises all the variables for the network with different values
+        # 1. Create a list of unconnected nodes with random biases and activations
+        # 2. Add the input nodes and output nodes
+
+        # Stage One
         index = -1
         for i in nodeNumbers:
             index += 1
@@ -62,7 +64,7 @@ class NeuralNetwork:
                 # initialise nodes with None type inputs and outputs as well as biases and outputs
                 self.nodes[index].append(Node([None], [None], random.uniform(0, 1), random.uniform(-10, 10), x))
 
-        # This loops through the generated array and sets the input nodes
+        # Stage Two
         for i in range(self.layers):
             layer = self.nodes[i]
             # To skip the first layer which are the inputs and so don't have input nodes
@@ -91,9 +93,14 @@ class NeuralNetwork:
                     tgtNode.outputNodes[x] = [self.nodes[i + 1][x], self.nodes[i + 1][x].inputNodes[tgtNode.number][1]]
 
     def saveToFile(self, filePath):
-        # This initialises a string that we will write to the file
+        # This function saves the current state of the network to a text file
+        # 1. Convert the data to a string and suitably seperate the different data types
+        # 2. Put it into a text document
+
+        # Initialisation
         stringToWrite = ""
-        # Loops through the nodes array to add the inputNodes weights to the string
+
+        # Stage One
         for i in range(self.layers):
             layer = self.nodes[i]
             # Skips the first layer which has no inputs
@@ -124,22 +131,26 @@ class NeuralNetwork:
                 # Appends the bias to the string
                 stringToWrite += str(node.bias)
 
-        # Opens the file for overwriting
+        # Stage Two
         file = open(filePath, 'w')
         file.write(stringToWrite)
         file.close()
 
     def loadFromFile(self, filePath):
-        # This opens the file and reads the entire thing as one string
+        # This function opens a specified save file and puts the weights and biases within into the network
+        # 1. Read the string from the file
+        # 2. Split up the string into each of the individual weights and biases
+        # 3. Replace the current weights and biases with the new ones
+
+        # Initialisation and Stage One
         file = open(filePath, 'r')
         weights = file.read()
         file.close()
-        # Splits for in between biases and weights
+
+        # Stage Two
         weights = weights.split("|")
-        # This entire thing loops through the new data and splits it for each different data type
-        # The while loops remove the extraneous data that comes from splitting strings
         for i in range(len(weights)):
-            # This is specifically for weights
+            # This is specifically for the weight values
             if i == 0:
                 # This splits between layers
                 weights[i] = weights[i].split("#")
@@ -155,7 +166,8 @@ class NeuralNetwork:
                         weights[i][x].remove('')
                 while '' in weights[i]:
                     weights[i].remove('')
-            # This is specifically for biases
+
+            # This is specifically for bias values
             if i == 1:
                 # This splits between layers
                 weights[i] = weights[i].split("#")
@@ -170,6 +182,7 @@ class NeuralNetwork:
         # This is the final method of removing extraneous data
         weights = [x for x in weights if x]
 
+        # Stage Three
         # With the data taken and pruned I can now add it to the network.
         for i in range(len(weights)):
             # This is for the weights
@@ -207,7 +220,7 @@ class NeuralNetwork:
                     tgtNode.outputNodes[x][1] = self.nodes[i + 1][x].inputNodes[tgtNode.number][1]
 
     def loadInputs(self, inputArray):
-        # Loads an input array into the neural network
+        # This function loads an input array into the neural network
         for i in range(len(inputArray)):
             self.nodes[0][i].output = inputArray[i]
 
@@ -220,83 +233,105 @@ class NeuralNetwork:
         return lp, mp
 
     def feedForward(self):
+        # This gets the output for each node based of the current input
+        # 1. Loop through teh network
+        # 2. Make each node feed forward
+        # 3. Get the output for the output layers
+
+        # Initialiasation
         output = []
-        # does all the feed forwards for all the nodes
+
+        # Stage One
         for i in range(len(self.nodes)):
             # skips first layer which already has their own outputs
             if i == 0:
                 continue
             for node in self.nodes[i]:
+                # Stage Two
                 node.feedForward()
 
+        # Stage Three
         for i in self.nodes[len(self.nodes) - 1]:
             output.append(i.output)
+
         return output
 
     def backPropagateCost(self, trueValue):
-        # Get the output layers error values for usage in the back propagation
-        # Loops through the outputs and calculates the derivative of the cost function for each of them
+        # This function gets the error value for every node in the network
+        # 1. Gets the output nodes error
+        # 2. Loop through the whole network
+        # 3. Calculate error for each node
+
+        # Stage One
         for i in range(len(trueValue)):
-            # This is the derivative of the cost function
             newCostDerivative = 2 * (trueValue[i] - self.nodes[self.layers - 1][i].output) * util.sigmoidDerivative(self.nodes[self.layers - 1][i].z)
             self.nodes[self.layers - 1][i].error = newCostDerivative
 
-        # loops through the nodes array to propagate backwards for the error of each node
+        # Stage Two
         for i in range(self.layers - 1, -1, -1):
+
             # Skips the last layer as it already has its error
             if i == self.layers - 1 or i == 0:
                 continue
-            # loops through the nodes to set error
+
             for tgtNode in self.nodes[i]:
                 cost = 0
-                # Sums the error of the node
+                # Stage Three
                 for x in tgtNode.outputNodes:
-                    # This multiplies previous nodes error with the weight connecting both of the nodes to get the error
-                    # of the node, this is because of the chain rule.
                     cost += x[0].error * x[1]
                 tgtNode.error += cost * util.sigmoidDerivative(tgtNode.z)
 
     def updateWeights(self, learningPace):
-        # This loops through the generated list and sets the input nodes
+        # Changes the weights based off error and learning pace
+        # 1. Loop through the network
+        # 2. Update weight and biases based of the back propagation algorithm
+
+        # Stage One
         for i in range(self.layers):
             layer = self.nodes[i]
-            # To skip the first layer which is just inputs and are not actually nodes, so don't have input nodes.
+
+            # This prevents errors
             if i == 0:
                 continue
-            # updates weights
+
+            # Stage 2
             for tgtNode in layer:
-                # loops through previous layer and sets weight and nodes
                 biasDelta = learningPace * tgtNode.error
                 for x in tgtNode.inputNodes:
-                    # multiplies the nodes error with the connected nodes output to get the weights specific error
                     x[1] += biasDelta * x[0].output
                     x[0].outputNodes[tgtNode.number][1] = x[1]
-                # I already have the bias error so I just multiply it by a constant to get change
+
                 tgtNode.bias += biasDelta
                 tgtNode.error = 0
 
     def trainNetwork(self, trainingData, trainingLabels, epochs, learningPace, lowestCost):
+        # This trains the network to recognise numbers
+        # 1. Loop through the training items
+        # 2. Get the guess from the network
+        # 3. Check guess with the correct answer and change the weights and biases connected to the answer
+        # 4. Evaluate the cost and give user info
+
+        # Initialisation
         costArray = []
         lp = learningPace
-        lowestCost = lowestCost
+
+        # Stage One
         for x in range(epochs):
             costMean = 0
             for i in tqdm(range(len(trainingData))):
-                # gets guess and true values
-                # loads the right input array for the feed forward algorithm
+
+                # Stage Two
                 self.loadInputs(trainingData[i])
-                # generates a guess using the feed forward algorithm
                 guess = self.feedForward()
-                # gets the right answers from the array
+
+                # Stage Three
                 trueValue = trainingLabels[i]
-                # back propagates error to get the error of each node
                 self.backPropagateCost(trueValue)
-                # updates the weights and biases using the error of the nodes
                 self.updateWeights(lp)
 
+                # Stage Four
                 cost = util.evaluateCost(guess, trueValue)
                 costMean += cost
-
                 if (i + 1) % 10000 == 0 or i == 0:
                     if i != 0:
                         costMean = costMean / 10000
@@ -306,7 +341,7 @@ class NeuralNetwork:
                     costArray.append(costMean)
                     print("Epoch:", x)
                     print("Rep:", i + 1)
-                    print("Guess:", self.getAnswer(trainingData[i]))
+                    print("Guess:", guess)
                     print("Answer:", trueValue)
                     print("Learning Pace:", lp)
                     print("Loss:", costMean)
@@ -325,51 +360,63 @@ class NeuralNetwork:
         plt.show()
 
     def testNetwork(self, testData, testLabels, rightNumber):
+        # This function runs the neural network for a test dataset in order for an answer to multiple inputs
+        # 1. Loop through test inputs
+        # 2. Get answer to the input
+        # 3. Count the amount correct
+        # 4. Calculate the percentages
+
+        # Initialisation
         right = 0
         answer = -1
         numbersRight = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        # This is for testing percentages of the neural network getting it correctly
+
+        # Stage One
         for i in tqdm(range(len(testData))):
+
+            # Stage Two
             guess = self.getAnswer(testData[i])
             labels = testLabels[i].tolist()
             correct = labels.index(rightNumber)
+
+            # Stage Three
             runningTotal = 0
             for x in guess:
                 if x >= runningTotal:
                     runningTotal = x
                     answer = guess.index(x)
-            # print("Guess", answer, guess)
-            # print("Answer", correct)
-
             if correct == answer:
                 right += 1
                 numbersRight[correct - 1] += 1
-            if i >= 9990:
-                img = testData[i].reshape((28, 28))
-                plt.imshow(img, cmap="Greys")
-                print("Right Answer: ", correct)
-                print("Guess: ", answer)
-                plt.show()
-                print("----------------")
+
+        # Stage Four
         print("Total percentage correct:", (right * 100) / len(testData), "%")
         for correct in numbersRight:
             print("Percentage correct for", numbersRight.index(correct) + 1, "is:",
                   (correct * 100) / (len(testData) / 10), "%")
         plt.show()
-        input("Enter to close the program")
 
     def getAnswer(self, input):
+        # This gets an answer for a specific input
+        # 1. Protect the computer from inputs
+        # 2. Feed forward for all nodes
+        # 3. Get the output from the output nodes
+
+        # Initialisation
         self.loadInputs(input)
         output = []
-        # does all the feed forwards for all the nodes
+
         for layer in self.nodes:
-            # skips first layer which already has their own outputs
+
+            # Stage One
             if self.nodes.index(layer) == 0:
                 continue
 
+            # Stage Two
             for node in layer:
                 node.feedForward()
-        # gets the output for all the output nodes
+
+        # Stage Three
         for i in self.nodes[len(self.nodes) - 1]:
             output.append(i.output)
         x = 0
@@ -377,40 +424,5 @@ class NeuralNetwork:
             if i > x:
                 x = i
         guess = output.index(x)
-        return str(guess) + " with " + str(x) + " activation."
-        # return output
 
-# dataset = [[2.7810836, 2.550537003],
-#            [1.465489372, 2.362125076],
-#            [3.396561688, 4.400293529],
-#            [1.38807019, 1.850220317],
-#            [3.06407232, 3.005305973],
-#            [7.627531214, 2.759262235],
-#            [5.332441248, 2.088626775],
-#            [6.922596716, 1.77106367],
-#            [8.675418651, -0.242068655],
-#            [7.673756466, 3.508563011]]
-# trueValue = [[0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.01, 0.99],
-#              [0.99, 0.01],
-#              [0.99, 0.01],
-#              [0.99, 0.01],
-#              [0.99, 0.01],
-#              [0.99, 0.01]]
-# # trueValue = [[0, 1],
-# #              [0, 1],
-# #              [0, 1],
-# #              [0, 1],
-# #              [0, 1],
-# #              [1, 0],
-# #              [1, 0],
-# #              [1, 0],
-# #              [1, 0],
-# #              [1, 0]]
-#
-# nn = NeuralNetwork([2, 3, 2], False, "data/testWeights.txt")
-# nn.trainNetwork(dataset, trueValue, 10000, 1, 0, 10, 0.1)
-# nn.testNetwork(dataset, trueValue, 0.99)
+        return str(guess), str(x)
