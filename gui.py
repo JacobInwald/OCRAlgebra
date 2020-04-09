@@ -158,8 +158,8 @@ class UiMainWindow(object):
                                             "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8pt; font-weight:400; font-style:normal;\">\n"
                                             "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'MS Shell Dlg 2\'; font-size:22pt;\">Neural Network for Optical Character Recognition</span></p></body></html>"))
         self.terminalUpdate("")
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("MainWindow", "Tab 1"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("MainWindow", "Tab 2"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), _translate("MainWindow", "Single Digits"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_4), _translate("MainWindow", "Multiple Digits"))
 
 
     def terminalUpdate(self, string):
@@ -220,4 +220,4 @@ def start(nn):
     sys.exit(app.exec_())
 
 
-# start(nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights[1].txt"))
+start(nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights[1].txt"))
