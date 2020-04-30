@@ -7,24 +7,23 @@ from tqdm import tqdm
 class Node:
 
     def __init__(self, inputNodes, outputNodes, output, bias, number):
+
         # These will be a lists of tuples, the first item being the node the second being the weight
         self.inputNodes = inputNodes
         self.outputNodes = outputNodes
+
         # These are the variables used in propagation. I am using the sigmoid function as an activation function.
         self.bias = bias
         self.activationFunction = util.sigmoid
         self.output = output
         self.z = util.sigmoidDerivative(output)
         self.error = 0
-        # Momentum variable used to make sure the node continues on its trend from preivous iterations.
-        self.momentum = 0
-        self.prevOutput = 0
+
         # This is an id that stores position in the nodes array
         self.number = number
 
     def feedForward(self):
         # This just sums the input nodes outputs and then passes that values through an activation function
-        self.prevOutput = self.output
         self.z = self.sumInputs() + self.bias
         self.output = self.activationFunction(self.z)
 
@@ -238,14 +237,16 @@ class NeuralNetwork:
         # 2. Make each node feed forward
         # 3. Get the output for the output layers
 
-        # Initialiasation
+        # Initialisation
         output = []
 
         # Stage One
         for i in range(len(self.nodes)):
+
             # skips first layer which already has their own outputs
             if i == 0:
                 continue
+
             for node in self.nodes[i]:
                 # Stage Two
                 node.feedForward()
@@ -288,14 +289,13 @@ class NeuralNetwork:
 
         # Stage One
         for i in range(self.layers):
-            layer = self.nodes[i]
 
-            # This prevents errors
+            # This prevents errors because the input nodes have no input nodes themselves
             if i == 0:
                 continue
 
             # Stage 2
-            for tgtNode in layer:
+            for tgtNode in self.nodes[i]:
                 biasDelta = learningPace * tgtNode.error
                 for x in tgtNode.inputNodes:
                     x[1] += biasDelta * x[0].output
@@ -322,6 +322,7 @@ class NeuralNetwork:
 
                 # Stage Two
                 self.loadInputs(trainingData[i])
+                guess = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
                 guess = self.feedForward()
 
                 # Stage Three
@@ -349,7 +350,7 @@ class NeuralNetwork:
                         lowestCost = costMean
                         print("Saving weights ...")
                         self.saveToFile(self.path)
-                    if costMean <= 0.001 and i != 0:
+                    if costMean <= 0.01 and i != 0:
                         break
                     costMean = 0
                     print("-----------------------------------")
@@ -375,7 +376,8 @@ class NeuralNetwork:
         for i in tqdm(range(len(testData))):
 
             # Stage Two
-            guess = self.getAnswer(testData[i])
+            self.loadInputs(testData[i])
+            guess = self.feedForward()
             labels = testLabels[i].tolist()
             correct = labels.index(rightNumber)
 
@@ -426,3 +428,51 @@ class NeuralNetwork:
         guess = output.index(x)
 
         return str(guess), str(x)
+
+#
+# dataset = [[2.7810836, 2.550537003],
+#
+#            [1.465489372, 2.362125076],
+#
+#            [3.396561688, 4.400293529],
+#
+#            [1.38807019, 1.850220317],
+#
+#            [3.06407232, 3.005305973],
+#
+#            [7.627531214, 2.759262235],
+#
+#            [5.332441248, 2.088626775],
+#
+#            [6.922596716, 1.77106367],
+#
+#            [8.675418651, -0.242068655],
+#
+#            [7.673756466, 3.508563011]]
+#
+# # trueValue = [[0.01, 0.99],
+#
+# #              [0.01, 0.99],
+# #              [0.01, 0.99],
+# #              [0.01, 0.99],
+# #              [0.01, 0.99],
+# #              [0.99, 0.01],
+# #              [0.99, 0.01],
+# #              [0.99, 0.01],
+# #              [0.99, 0.01],
+# #              [0.99, 0.01]]
+# trueValue = [[0, 1],
+#              [0, 1],
+#              [0, 1],
+#              [0, 1],
+#              [0, 1],
+#              [1, 0],
+#              [1, 0],
+#              [1, 0],
+#              [1, 0],
+#              [1, 0]]
+#
+#
+# nn = NeuralNetwork([2, 3, 2], False, "data/test.txt")
+# nn.trainNetwork(dataset, trueValue, 10000, 1, 10)
+# nn.testNetwork(dataset, trueValue, 1)

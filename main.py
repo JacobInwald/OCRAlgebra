@@ -51,7 +51,8 @@ print("Time taken:", timeTaken)
 # The second value determines whether the network will be loaded from a file. To make it do a proper training session
 # change it to False
 neuralNetwork = nn.NeuralNetwork([784, 24, 24, 10], True, "data/weights[1].txt")
-# Loss: 0.09472194420588799 for most trasined one
-neuralNetwork.trainNetwork(trainingImages, trainingLabelsOneHot, 100, 0.1, 0.01755149870572439)
+# Loss: 0.016759857738949845 for most trained one
+# To edit the learning paces change the values in the learningPace.txt
+neuralNetwork.trainNetwork(trainingImages, trainingLabelsOneHot, 100, 0.1, 0.016759857738949845)
 neuralNetwork.testNetwork(testImages, testLabelsOneHot, 1)
 gui.start(neuralNetwork)

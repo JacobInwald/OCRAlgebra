@@ -2,7 +2,6 @@
 import numpy as np
 from PIL import Image
 
-
 # # # Neural Network Utilities
 
 
@@ -98,7 +97,7 @@ def centreImage(img):
         return img
 
     # Stage Four
-    img = img.crop((left, top, right, bottom))
+    img = img.crop((left, top, right + 1, bottom + 1))
     tgtImg.paste(img, (int((width / 2) - (right - left) / 2), int((height / 2) - (bottom - top) / 2)))
 
     return tgtImg
@@ -143,7 +142,8 @@ def cleanImage(image):
 def cropOutNumber(startX, startY, img):
     # This function crops out an image from its furthest left and highest pixel
     # 1. Outline Image
-    # 2. Fix up image by filling in holes left by the outlining
+    # 2. Use the outline to determine the boundaries of the image and thus crop it out of the original. This preserves
+    #    internal shapes
 
     # Initialisation
     width, height = img.size
@@ -151,9 +151,11 @@ def cropOutNumber(startX, startY, img):
     numberPixels = []
     direction = 1
     tgtImg = Image.new('LA', (width, height))
+    outImg = Image.new('LA', (width, height))
     for x in range(width):
         for y in range(height):
             tgtImg.putpixel((x, y), (255, 255))
+            outImg.putpixel((x, y), (255, 255))
 
     x = startX
     y = startY
@@ -257,7 +259,10 @@ def cropOutNumber(startX, startY, img):
     tgtImg.putpixel((x, y), img.getpixel((x, y)))
 
     # Stage 2
-    tgtImg = fillHolesInImages(tgtImg)
+    left, top, right, bottom = findBoundaryBox(tgtImg)
+    tgtImg = img.crop((left, top, right + 1, bottom + 1))
+    outImg.paste(tgtImg, (left, top))
+    tgtImg = outImg
 
     return tgtImg
 
@@ -304,8 +309,8 @@ def cropOutNumbers(img):
         index += 1
 
         # Stage 4
-        for x in range(width):
-            for y in range(height):
+        for y in range(height):
+            for x in range(width):
                 if numbers[index].getpixel((x, y)) != (255, 255):
                     img.putpixel((x, y), (255, 255))
 
@@ -323,6 +328,7 @@ def cropOutNumbers(img):
     return numbers
 
 
+# This became redundant because of the better alternative of cropping, but I'm keeping it here for sentimentality sake.
 def fillHolesInImages(img):
     # This function fills up holes in images
     # 1. Invert image colours
@@ -380,3 +386,40 @@ def floodFill(x, y, colour, img):
             floodFill(x, y + 1, colour, img)
 
     return img
+
+
+def findBoundaryBox(img):
+    # This function finds the boundaries of a shape i.e the leftmost and rightmost x values as well as the top and
+    # bottom y values
+    # 1. Loop through the image and check if the pixel is coloured.
+    # 2. If it is the first pixel, then it is the top one, and the last pixel is the bottom most pixel.
+    # 3. Then check whether the pixel is further to the right/left than the last right/left value, if so change the
+    # right/left value to match
+
+    # Initialisation
+    width, height = img.size
+    left = 0
+    right = 0
+    top = 0
+    bottom = 0
+    topFound = False
+
+    # Stage One
+    for y in range(height):
+        for x in range(width):
+            white, black = img.getpixel((x, y))
+            if (white, black) != (255, 255):
+
+                # Stage Two
+                if not topFound:
+                    top = y
+                    topFound = True
+                bottom = y
+
+                # Stage Three
+                if x <= left:
+                    left = x
+                if x >= right:
+                    right = x
+
+    return left, top, right, bottom
